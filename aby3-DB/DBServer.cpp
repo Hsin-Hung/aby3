@@ -94,7 +94,7 @@ namespace osuCrypto
             mRt.mComm.mPrev.asyncSendCopy(t.mColumns[i].mName);
 
             aby3::sbMatrix& a1 = ret.mColumns[i];
-
+            // generate shared data with table column
             mEnc.localBinMatrix(mRt.mComm, t.mColumns[i].mData, a1);
         }
 
@@ -304,7 +304,6 @@ namespace osuCrypto
             C,
             // inputs 
             query);
-
 
         std::vector<SharedTable::ColRef> srcColumns; srcColumns.reserve(query.mOutputs.size());
         for (u64 i = 0; i < query.mOutputs.size(); ++i)

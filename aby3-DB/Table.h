@@ -109,7 +109,7 @@ namespace osuCrypto
     {
     public:
         std::vector<Column> mColumns;
-
+        friend std::ostream& operator<<(std::ostream& os, const Table& tb);
         Table() = default;
         Table(const Table&) = default;
         Table(Table&&) = default;
@@ -145,7 +145,7 @@ namespace osuCrypto
     public:
         // shared keys are stored in packed binary format. i.e. XOR shared and trasposed.
         std::vector<SharedColumn> mColumns;
-
+        friend std::ostream& operator<<(std::ostream& os, const SharedTable& stb);
         struct ColRef
         {
             SharedTable& mTable;

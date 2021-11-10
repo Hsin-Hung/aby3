@@ -256,4 +256,41 @@ namespace osuCrypto
             mSelect,
             mSelect.addOp(selectDetails::Add, mMemIdx, r.mMemIdx) };
     }
+    std::ostream& operator<<(std::ostream& os, const Table& tb)
+    {
+
+        for(auto i = 0; i < tb.mColumns.size(); i++){
+            Column col = tb.mColumns[i];
+            os << "col " << i << " : " << "col name: " << col.mName << "\n" << col.mData;
+        }
+    
+    return os;
+    }
+    std::ostream& operator<<(std::ostream& os, const SharedTable& stb){
+        
+        int count = 0;
+        for(auto i = 0; i < stb.mColumns.size(); i++){
+            SharedColumn col = stb.mColumns[i];
+            os << "col " << i << " : " << "col name: " << col.mName << ", col nums: " << col.i64Cols() << ", row nums: " << col.rows() << "\n";
+            for(auto &s: col.mShares[0]){
+                os << s << " ";
+                if(++count == 2){
+                    count %= 2;
+                    os << "\n";
+                }
+            }
+            os << "\n";
+            count = 0;
+            for(auto &s: col.mShares[1]){
+                os << s << " ";
+                if(++count == 2){
+                    count %= 2;
+                    os << "\n";
+                }
+            }
+            
+        }
+    
+    return os;
+    }
 }

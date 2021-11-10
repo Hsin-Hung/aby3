@@ -14,6 +14,7 @@ using namespace oc;
 
 void DB_Intersect(u32 rows, u32 cols, bool sum)
 {
+	std::cout << "rows: " << rows << ", cols: " << cols << ", sum: " << sum << std::endl;
 	using namespace aby3;
 	IOService ios;
 	Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
@@ -23,7 +24,7 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 	Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
 	Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
 
-	
+	// A Peudorandom number generator implemented using AES-NI
 	PRNG prng(oc::ZeroBlock);
 	DBServer srvs[3];
 	srvs[0].init(0, s02, s01, prng);
@@ -45,6 +46,8 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 		bCols.emplace_back("b" + std::to_string(i), TypeID::IntID, 32);
 	}
 
+	std::cout << "aCols size: " << aCols.size() << std::endl;
+	std::cout << "bCols size: " << bCols.size() << std::endl;
 	Table a(rows, aCols)
 		, b(rows, bCols);
 	auto intersectionSize = (rows + 1) / 2;
@@ -57,8 +60,27 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 		{
 			a.mColumns[0].mData(i, j) = i + 1;
 			b.mColumns[0].mData(i, j) = i + 1 + (rows * out);
+			// if(j == 0){
+			// 	a.mColumns[0].mData(i, j) = i + 1;
+			// 	b.mColumns[0].mData(i, j) = i + 1;
+			// }else{
+			// 	if(i % 2 == 0){
+			// 		a.mColumns[0].mData(i, j) = i + 1;
+			// 		b.mColumns[0].mData(i, j) = i + 1;
+			// 	}else{
+			// 		a.mColumns[0].mData(i, j) = i;
+			// 		b.mColumns[0].mData(i, j) = i + 1;
+			// 	}
+			// }
+			
+			
+			
 		}
 	}
+	std::cout << "Table A\n_____________" << std::endl;
+	std::cout << a << std::endl;
+	std::cout << "Table B\n_____________" << std::endl;
+	std::cout << b << std::endl;
 
 	Timer t;
 
@@ -67,7 +89,7 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 		setThreadName("t0");
 		t.setTimePoint("start");
 
-
+		// party 0 will get the local input and other parties will get it remotely from party 0
 		auto A = (i == 0) ? srvs[i].localInput(a) : srvs[i].remoteInput(0);
 		auto B = (i == 0) ? srvs[i].localInput(b) : srvs[i].remoteInput(0);
 
@@ -76,11 +98,19 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 
 		if (i == 0)
 			srvs[i].setTimer(t);
-
+		
+		if (i == 0)
+		{	
+			std::cout << "routine: " << i << std::endl; 
+			std::cout << "SharedTable A\n_____________" << std::endl;
+			std::cout << A << std::endl;
+			std::cout << "SharedTable B\n_____________" << std::endl;
+			std::cout << B << std::endl;
+		}
 
 
 		SelectQuery query;
-		query.noReveal("r");
+		// query.noReveal("r");
 		auto aKey = query.joinOn(A["key"], B["key"]);
 		query.addOutput("key", aKey);
 
@@ -92,6 +122,8 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 
 		auto C = srvs[i].joinImpl(query);
 
+		if (i == 0)
+			std::cout << "Join Implement Returns Shared Table: \n" << C << std::endl;
 		if (i == 0)
 			t.setTimePoint("intersect");
 
@@ -126,9 +158,14 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 		{
 			aby3::i64Matrix c(C.mColumns[0].rows(), C.mColumns[0].i64Cols());
 			srvs[i].mEnc.revealAll(srvs[i].mRt.mComm, C.mColumns[0], c);
-
 			if (i == 0)
 				t.setTimePoint("reveal");
+			if(i == 0){
+				std::cout << "reveal C: \n"<< C << std::endl;
+				std::cout << "reveal mini c: \n" << c << std::endl;
+			}
+			
+
 		}
 		else
 		{

@@ -163,9 +163,11 @@ namespace aby3
         auto b1 = ret.i64Size() != static_cast<u64>(m.size());
         if (b0 || b1)
             throw std::runtime_error(LOCATION);
-
-        for (u64 i = 0; i < ret.mShares[0].size(); ++i)
+        // std::cout << "xor binary share: " << std::endl;
+        for (u64 i = 0; i < ret.mShares[0].size(); ++i){
             ret.mShares[0](i) = mShareGen.getBinaryShare() ^ m(i);
+            // std::cout << "m(i): " << m(i) << ", share: "<< ret.mShares[0](i) << std::endl;
+        }
 
         comm.mNext.asyncSendCopy(ret.mShares[0].data(), ret.mShares[0].size());
         comm.mPrev.recv(ret.mShares[1].data(), ret.mShares[1].size());
