@@ -261,7 +261,7 @@ namespace osuCrypto
 
         for(auto i = 0; i < tb.mColumns.size(); i++){
             Column col = tb.mColumns[i];
-            os << "col " << i << " : " << "col name: " << col.mName << "\n" << col.mData;
+            os << "col " << i << " : " << "col name: " << col.mName << "\n" << col.mData << "\n";
         }
     
     return os;
@@ -272,25 +272,19 @@ namespace osuCrypto
         for(auto i = 0; i < stb.mColumns.size(); i++){
             SharedColumn col = stb.mColumns[i];
             os << "col " << i << " : " << "col name: " << col.mName << ", col nums: " << col.i64Cols() << ", row nums: " << col.rows() << "\n";
-            for(auto &s: col.mShares[0]){
-                os << s << " ";
-                if(++count == 2){
-                    count %= 2;
-                    os << "\n";
+
+            for(auto c: col.mShares){
+                for(auto &s: c){
+                    os << s << " ";
+                    if(++count == 2){
+                        count %= 2;
+                        os << "\n";
+                    }
                 }
+                os << "\n";
             }
-            os << "\n";
-            count = 0;
-            for(auto &s: col.mShares[1]){
-                os << s << " ";
-                if(++count == 2){
-                    count %= 2;
-                    os << "\n";
-                }
-            }
-            
         }
     
-    return os;
+        return os;
     }
 }

@@ -12,9 +12,9 @@
 using namespace oc; 
 
 
-void DB_Intersect(u32 rows, u32 cols, bool sum)
+void DB_Intersect(std::pair<std::vector<std::pair<std::string, std::vector<int>>>, 
+std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols, bool sum)
 {
-	std::cout << "rows: " << rows << ", cols: " << cols << ", sum: " << sum << std::endl;
 	using namespace aby3;
 	IOService ios;
 	Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
@@ -31,6 +31,7 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 	srvs[1].init(1, s10, s12, prng);
 	srvs[2].init(2, s21, s20, prng);
 
+	auto has_data = !data.first.empty();
 
 	// 80 bits;
 	u32 hashSize = 80;
@@ -42,46 +43,48 @@ void DB_Intersect(u32 rows, u32 cols, bool sum)
 
 	for (u32 i = 0; i < cols; ++i)
 	{
-		//aCols.emplace_back("a" + std::to_string(i), TypeID::IntID, 32);
+		aCols.emplace_back("a" + std::to_string(i), TypeID::IntID, 32);
 		bCols.emplace_back("b" + std::to_string(i), TypeID::IntID, 32);
 	}
 
 	std::cout << "aCols size: " << aCols.size() << std::endl;
 	std::cout << "bCols size: " << bCols.size() << std::endl;
+	
+	auto left_table = data.first, right_table = data.second;
+
 	Table a(rows, aCols)
 		, b(rows, bCols);
 	auto intersectionSize = (rows + 1) / 2;
-
-
-	for (u64 i = 0; i < rows; ++i)
-	{
-		auto out = (i >= intersectionSize);
-		for (u64 j = 0; j < a.mColumns[0].mData.cols(); ++j)
+	if(has_data){
+		for (u64 i = 0; i < rows; ++i){
+			for (u64 numCol = 0; numCol < a.mColumns.size(); ++numCol){
+				for (u64 j = 0; j < a.mColumns[numCol].mData.cols(); ++j){
+					if(i < left_table.at(numCol).second.size())
+						a.mColumns[numCol].mData(i, j) = left_table.at(numCol).second.at(i);
+					if(i < right_table.at(numCol).second.size())
+						b.mColumns[numCol].mData(i, j) = right_table.at(numCol).second.at(i);
+				}
+			}
+		}
+	}else{
+		for (u64 i = 0; i < rows; ++i)
 		{
-			a.mColumns[0].mData(i, j) = i + 1;
-			b.mColumns[0].mData(i, j) = i + 1 + (rows * out);
-			// if(j == 0){
-			// 	a.mColumns[0].mData(i, j) = i + 1;
-			// 	b.mColumns[0].mData(i, j) = i + 1;
-			// }else{
-			// 	if(i % 2 == 0){
-			// 		a.mColumns[0].mData(i, j) = i + 1;
-			// 		b.mColumns[0].mData(i, j) = i + 1;
-			// 	}else{
-			// 		a.mColumns[0].mData(i, j) = i;
-			// 		b.mColumns[0].mData(i, j) = i + 1;
-			// 	}
-			// }
-			
-			
-			
+			auto out = (i >= intersectionSize);
+			for (u64 numCol = 0; numCol < a.mColumns.size(); ++numCol){
+				for (u64 j = 0; j < a.mColumns[numCol].mData.cols(); ++j)
+				{
+					a.mColumns[numCol].mData(i, j) = i + 1;
+					b.mColumns[numCol].mData(i, j) = i + 1  + (rows * out);
+				}
+			}
 		}
 	}
+
+	std::cout << "rows: " << rows << ", cols: " << cols << std::endl;
 	std::cout << "Table A\n_____________" << std::endl;
 	std::cout << a << std::endl;
 	std::cout << "Table B\n_____________" << std::endl;
 	std::cout << b << std::endl;
-
 	Timer t;
 
 	bool failed = false;

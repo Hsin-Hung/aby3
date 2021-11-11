@@ -11,10 +11,78 @@
 
 #include "tests_cryptoTools/UnitTests.h"
 #include "cryptoTools/Crypto/PRNG.h"
+#include <iostream>
+#include <fstream>
+#include <string>
 
 using namespace oc;
 using namespace aby3;
 std::vector<std::string> unitTestTag{ "u", "unitTest" };
+
+
+std::vector<std::pair<std::string, std::vector<int>>> read_csv(std::string filename){
+    // Reads a CSV file into a vector of <string, vector<int>> pairs where
+    // each pair represents <column name, column values>
+
+    // Create a vector of <string, int vector> pairs to store the result
+    std::vector<std::pair<std::string, std::vector<int>>> result;
+
+    // Create an input filestream
+	std::cout << filename << std::endl;
+    std::ifstream myFile(filename);
+
+    // Make sure the file is open
+    if(!myFile.is_open()) throw std::runtime_error("Could not open file");
+
+    // Helper vars
+    std::string line, colname;
+    int val;
+
+    // Read the column names
+    if(myFile.good())
+    {
+        // Extract the first line in the file
+        std::getline(myFile, line);
+
+        // Create a stringstream from line
+        std::stringstream ss(line);
+
+        // Extract each column name
+        while(std::getline(ss, colname, ',')){
+            
+            // Initialize and add <colname, int vector> pairs to result
+            result.push_back({colname, std::vector<int> {}});
+        }
+    }
+
+    // Read data, line by line
+    while(std::getline(myFile, line))
+    {
+        // Create a stringstream of the current line
+        std::stringstream ss(line);
+        
+        // Keep track of the current column index
+        int colIdx = 0;
+        
+        // Extract each integer
+        while(ss >> val){
+            
+            // Add the current integer to the 'colIdx' column's values vector
+            result.at(colIdx).second.push_back(val);
+            
+            // If the next token is a comma, ignore it and move on
+            if(ss.peek() == ',') ss.ignore();
+            
+            // Increment the column index
+            colIdx++;
+        }
+    }
+
+    // Close file
+    myFile.close();
+
+    return result;
+}
 
 
 void help()
@@ -23,7 +91,7 @@ void help()
 	std::cout << "-u                        ~~ to run all tests" << std::endl;
 	std::cout << "-u n1 [n2 ...]            ~~ to run test n1, n2, ..." << std::endl;
 	std::cout << "-u -list                  ~~ to list all tests" << std::endl;
-	std::cout << "-intersect -nn NN [-c C]  ~~ to run the intersection benchmark with 2^NN set sizes, C 32-bit data columns." << std::endl;
+	std::cout << "-intersect [-nn NN [-c C]] [-l L -r R]  ~~ to run the intersection benchmark with 2^NN set sizes, C 32-bit data columns, L and R are table csv files" << std::endl;
 	std::cout << "-eric -nn NN              ~~ to run the eric benchmark with 2^NN set sizes" << std::endl;
 	std::cout << "-threat -nn NN -s S       ~~ to run the threat log benchmark with 2^NN set sizes and S sets" << std::endl;
 }
@@ -94,13 +162,30 @@ int main(int argc, char** argv)
 
 			auto nn = cmd.getMany<int>("nn");
 			auto c = cmd.getOr("c", 0);
+			auto left = cmd.getOr<std::string>("l", "");
+			auto right = cmd.getOr<std::string>("r", "");
+
+			std::pair<std::vector<std::pair<std::string, std::vector<int>>>, 
+			std::vector<std::pair<std::string, std::vector<int>>>> data;
+			
+			if(left !=  "" && right != ""){
+				data.first = read_csv(left);
+				data.second = read_csv(right);
+			}
+
 			if (nn.size() == 0)
 				nn.push_back(1 << 16);
 
 			for (auto n : nn)
 			{
 				auto size = 1 << n;
-				DB_Intersect(size, c, cmd.isSet("sum"));
+				if(!data.first.empty()){
+					size = std::max(data.first.at(0).second.size(), data.second.at(0).second.size());
+					c = std::max(data.first.size(), data.second.size()) - 1;
+				}
+
+				DB_Intersect(data, size, c, cmd.isSet("sum"));
+
 			}
 		}
 
