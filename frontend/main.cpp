@@ -164,6 +164,10 @@ int main(int argc, char** argv)
 			auto c = cmd.getOr("c", 0);
 			auto left = cmd.getOr<std::string>("l", "");
 			auto right = cmd.getOr<std::string>("r", "");
+			auto rank = cmd.getOr<int>("r", 0);
+			auto ip0 = cmd.getOr<std::string>("ip0", "machine_1");
+			auto ip1 = cmd.getOr<std::string>("ip1", "machine_2");
+			auto ip2 = cmd.getOr<std::string>("ip2", "machine_3");
 
 			std::pair<std::vector<std::pair<std::string, std::vector<int>>>, 
 			std::vector<std::pair<std::string, std::vector<int>>>> data;
@@ -184,7 +188,7 @@ int main(int argc, char** argv)
 					c = std::max(data.first.size(), data.second.size()) - 1;
 				}
 
-				DB_Intersect(data, size, c, cmd.isSet("sum"));
+				DB_Intersect(data, size, c, cmd.isSet("sum"), rank, ip0, ip1, ip2);
 
 			}
 		}

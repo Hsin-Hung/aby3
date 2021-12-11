@@ -13,30 +13,64 @@ using namespace oc;
 
 
 void DB_Intersect(std::pair<std::vector<std::pair<std::string, std::vector<int>>>, 
-std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols, bool sum)
+std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols, bool sum, int rank, std::string ip0, std::string ip1, std::string ip2)
 {
 	using namespace aby3;
 	IOService ios;
-	Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
-	Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
-	Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
-	Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
-	Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
-	Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+	std::string firstIP;
+	std::string secondIP;
+	u32 firstPort;
+	u32 secondPort;
+	SessionMode firstMode;
+	SessionMode secondMode;
+	std::string firstName;	
+	std::string secondName;
+
+	if (rank == 0) {
+		firstIP = "0.0.0.0";
+		secondIP = "0.0.0.0";
+		firstMode = SessionMode::Server;
+		secondMode = SessionMode::Server;
+		firstPort = 1212;
+		secondPort = 1213;
+		firstName = "02";
+		secondName = "01";
+	} else if (rank == 1) {
+		firstIP = ip0;
+		secondIP = "0.0.0.0";
+		firstMode = SessionMode::Client;
+		secondMode = SessionMode::Server;
+		firstPort = 1212;
+		secondPort = 1214;
+		firstName = "01";
+		secondName = "12";
+	} else if (rank == 2) {
+		firstIP = ip1;
+		secondIP = ip0;
+		firstMode = SessionMode::Client;
+		secondMode = SessionMode::Client;
+		firstPort = 1214;
+		secondPort = 1213;
+		firstName = "12";
+		secondName = "02";
+	}
+	std::cout << rank << " " << firstIP << " " << secondIP << std::endl;
+	Session server(ios, firstIP, firstPort, firstMode, firstName);
+	Session client(ios, secondIP, secondPort , secondMode, secondName);
+
 
 	// A Peudorandom number generator implemented using AES-NI
 	PRNG prng(oc::ZeroBlock);
-	DBServer srvs[3];
-	srvs[0].init(0, s02, s01, prng);
-	srvs[1].init(1, s10, s12, prng);
-	srvs[2].init(2, s21, s20, prng);
+	DBServer srvs;
+	srvs.init(rank, server, client, prng);
+	std::cout << "Connection made" << std::endl;
 
 	auto has_data = !data.first.empty();
 
 	// 80 bits;
 	u32 hashSize = 80;
 
-	auto keyBitCount = srvs[0].mKeyBitCount;
+	auto keyBitCount = srvs.mKeyBitCount;
 	std::vector<ColumnInfo>
 		aCols = { ColumnInfo{ "key", TypeID::IntID, keyBitCount } },
 		bCols = { ColumnInfo{ "key", TypeID::IntID, keyBitCount } };
@@ -87,107 +121,100 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 	std::cout << b << std::endl;
 	Timer t;
 
+	int i = rank;
 	bool failed = false;
-	auto routine = [&](int i) {
-		setThreadName("t0");
-		t.setTimePoint("start");
+	std::cout << "Start routine" << std::endl;
+	setThreadName("t0");
+	t.setTimePoint("start");
+	
+	// party 0 will get the local input and other parties will get it remotely from party 0
+	std::cout << "Getting A" << std::endl;
+	auto A = (i == 0) ? srvs.localInput(a) : srvs.remoteInput(0);
+	std::cout << "Getting B" << std::endl;
+	auto B = (i == 0) ? srvs.localInput(b) : srvs.remoteInput(0);
 
-		// party 0 will get the local input and other parties will get it remotely from party 0
-		auto A = (i == 0) ? srvs[i].localInput(a) : srvs[i].remoteInput(0);
-		auto B = (i == 0) ? srvs[i].localInput(b) : srvs[i].remoteInput(0);
+	if (i == 0)
+		t.setTimePoint("inputs");
 
+	if (i == 0)
+		srvs.setTimer(t);
+	
+	if (i == 0)
+	{	
+		std::cout << "routine: " << i << std::endl; 
+		std::cout << "SharedTable A\n_____________" << std::endl;
+		std::cout << A << std::endl;
+		std::cout << "SharedTable B\n_____________" << std::endl;
+		std::cout << B << std::endl;
+	}
+
+
+	SelectQuery query;
+	// query.noReveal("r");
+	auto aKey = query.joinOn(A["key"], B["key"]);
+	query.addOutput("key", aKey);
+
+	for (u32 i = 0; i < cols; ++i)
+	{
+		//query.addOutput("a" + std::to_string(i), query.addInput(A["a" + std::to_string(i)]));
+		query.addOutput("b" + std::to_string(i), query.addInput(B["b" + std::to_string(i)]));
+	}
+
+	auto C = srvs.joinImpl(query);
+
+	if (i == 0)
+		std::cout << "Join Implement Returns Shared Table: \n" << C << std::endl;
+	if (i == 0)
+		t.setTimePoint("intersect");
+
+
+	if (sum)
+	{
+
+		Sh3BinaryEvaluator eval;
+
+		BetaLibrary lib;
+		BetaCircuit* cir = lib.int_int_add(64, 64, 64);
+
+		auto task = srvs.mRt.noDependencies();
+
+		sbMatrix AA(C.rows(), 64), BB(C.rows(), 64), CC(C.rows(), 64);
+		task = eval.asyncEvaluate(task, cir, srvs.mEnc.mShareGen, { &AA, &BB }, { &CC });
+
+		Sh3Encryptor enc;
 		if (i == 0)
-			t.setTimePoint("inputs");
-
-		if (i == 0)
-			srvs[i].setTimer(t);
-		
-		if (i == 0)
-		{	
-			std::cout << "routine: " << i << std::endl; 
-			std::cout << "SharedTable A\n_____________" << std::endl;
-			std::cout << A << std::endl;
-			std::cout << "SharedTable B\n_____________" << std::endl;
-			std::cout << B << std::endl;
-		}
-
-
-		SelectQuery query;
-		// query.noReveal("r");
-		auto aKey = query.joinOn(A["key"], B["key"]);
-		query.addOutput("key", aKey);
-
-		for (u32 i = 0; i < cols; ++i)
 		{
-			//query.addOutput("a" + std::to_string(i), query.addInput(A["a" + std::to_string(i)]));
-			query.addOutput("b" + std::to_string(i), query.addInput(B["b" + std::to_string(i)]));
-		}
-
-		auto C = srvs[i].joinImpl(query);
-
-		if (i == 0)
-			std::cout << "Join Implement Returns Shared Table: \n" << C << std::endl;
-		if (i == 0)
-			t.setTimePoint("intersect");
-
-
-		if (sum)
-		{
-
-			Sh3BinaryEvaluator eval;
-
-			BetaLibrary lib;
-			BetaCircuit* cir = lib.int_int_add(64, 64, 64);
-
-			auto task = srvs[i].mRt.noDependencies();
-
-			sbMatrix AA(C.rows(), 64), BB(C.rows(), 64), CC(C.rows(), 64);
-			task = eval.asyncEvaluate(task, cir, srvs[i].mEnc.mShareGen, { &AA, &BB }, { &CC });
-
-			Sh3Encryptor enc;
-			if (i == 0)
-			{
-				i64Matrix m(C.rows(), 1);
-				enc.reveal(task, CC, m).get();
-			}
-			else
-				enc.reveal(task, 0, CC).get();
-
-
-			if (i == 0)
-				t.setTimePoint("sum");
-		}
-		else if (C.rows())
-		{
-			aby3::i64Matrix c(C.mColumns[0].rows(), C.mColumns[0].i64Cols());
-			srvs[i].mEnc.revealAll(srvs[i].mRt.mComm, C.mColumns[0], c);
-			if (i == 0)
-				t.setTimePoint("reveal");
-			if(i == 0){
-				std::cout << "reveal C: \n"<< C << std::endl;
-				std::cout << "reveal mini c: \n" << c << std::endl;
-			}
-			
-
+			i64Matrix m(C.rows(), 1);
+			enc.reveal(task, CC, m).get();
 		}
 		else
-		{
-			failed = true;
+			enc.reveal(task, 0, CC).get();
+
+
+		if (i == 0)
+			t.setTimePoint("sum");
+	}
+	else if (C.rows())
+	{
+		aby3::i64Matrix c(C.mColumns[0].rows(), C.mColumns[0].i64Cols());
+		srvs.mEnc.revealAll(srvs.mRt.mComm, C.mColumns[0], c);
+		if (i == 0)
+			t.setTimePoint("reveal");
+		if(i == 0){
+			std::cout << "reveal C: \n"<< C << std::endl;
+			std::cout << "reveal mini c: \n" << c << std::endl;
 		}
-		//std::cout << t << std::endl << srvs[i].getTimer() << std::endl;
-	};
+		
 
-	auto t0 = std::thread(routine, 0);
-	auto t1 = std::thread(routine, 1);
-	routine(2);
+	}
+	else
+	{
+		failed = true;
+	}
+	//std::cout << t << std::endl << srvs.getTimer() << std::endl;
 
-	t0.join();
-	t1.join();
-
-	auto comm0 = (srvs[0].mRt.mComm.mNext.getTotalDataSent() + srvs[0].mRt.mComm.mPrev.getTotalDataSent());
-	auto comm1 = (srvs[1].mRt.mComm.mNext.getTotalDataSent() + srvs[1].mRt.mComm.mPrev.getTotalDataSent());
-	auto comm2 = (srvs[2].mRt.mComm.mNext.getTotalDataSent() + srvs[2].mRt.mComm.mPrev.getTotalDataSent());
-	std::cout << "n = " << rows << "   " << comm0 + comm1 + comm2 << "\n" << t << std::endl;
+	auto comm0 = (srvs.mRt.mComm.mNext.getTotalDataSent() + srvs.mRt.mComm.mPrev.getTotalDataSent());
+	// std::cout << "n = " << rows << "   " << comm0 + comm1 + comm2 << "\n" << t << std::endl;
 
 	if (failed)
 	{

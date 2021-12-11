@@ -16,6 +16,7 @@ namespace osuCrypto
         //mComm = { prev.addChannel(), next.addChannel() };
 
         aby3::CommPkg comm{ prev.addChannel(), next.addChannel() };
+        std::cout << "init mrt" << std::endl;
         mRt.init(idx, comm);
 
         mPrng.SetSeed(prng.get());
@@ -28,7 +29,7 @@ namespace osuCrypto
 
         //std::string filename = "./lowMCCircuit_b" + ToString(sizeof(LowMC2<>::block)) + "_k" + ToString(sizeof(LowMC2<>::keyblock)) + ".bin";
         std::stringstream filename;
-        filename << "./lowMCCircuit"
+        filename << "./lowMCCircuit" << idx
             << "_b" << blockSize
             << "_r" << rounds
             << "_d" << dataComplex
@@ -57,10 +58,28 @@ namespace osuCrypto
 
     void DBServer::initSeeds()
     {
-        block seed = mPrng.get(), prevSeed;
-        mRt.mComm.mNext.send(seed);
-        mRt.mComm.mPrev.recv(prevSeed);
-        mEnc.init(mIdx, prevSeed, seed);
+        block seed0 = mPrng.get(), seed1 = mPrng.get(), seed2 = mPrng.get();
+        std::cout << "Sending seeds" << std::endl;
+        mRt.mComm.mNext.asyncSendCopy(seed1);
+        std::cout << "Sending seeds" << std::endl;
+        mRt.mComm.mNext.asyncSendCopy(seed2);
+        std::cout << "Sending seeds" << std::endl;
+        mRt.mComm.mPrev.asyncSendCopy(seed2);
+        std::cout << "Sending seeds" << std::endl;
+        mRt.mComm.mPrev.asyncSendCopy(seed0);
+        mEnc.init(mIdx, seed0, seed1);
+        mHasSeed = true;
+    }
+    
+    void DBServer::recvSeeds()
+    {
+        block seed0, seed1;
+        auto chl = ((mIdx + 1) % 3 == 0) ? mRt.mComm.mNext : mRt.mComm.mPrev;
+        std::cout << "Receiving seeds" << std::endl;
+        chl.recv(seed0);
+        std::cout << "Receiving seeds" << std::endl;
+        chl.recv(seed1);
+        mEnc.init(mIdx, seed0, seed1);
         mHasSeed = true;
     }
 
@@ -70,10 +89,13 @@ namespace osuCrypto
             initSeeds();
 
         SharedTable ret;
+        std::cout << "Resizing Columns" << std::endl;
         ret.mColumns.resize(t.mColumns.size());
 
+        std::cout << "Copying rows" << std::endl;
         u64 rows = t.rows();
 
+        std::cout << "Sending rows" << std::endl;
         mRt.mComm.mNext.asyncSendCopy(rows);
         mRt.mComm.mPrev.asyncSendCopy(rows);
 
@@ -81,6 +103,7 @@ namespace osuCrypto
         for (u64 i = 0; i < t.mColumns.size(); ++i)
             sizes[i] = { t.mColumns[i].getBitCount(), (u64)t.mColumns[i].getTypeID() };
 
+        std::cout << "Sending sizes" << std::endl;
         mRt.mComm.mNext.asyncSendCopy(sizes);
         mRt.mComm.mPrev.asyncSend(std::move(sizes));
 
@@ -104,14 +127,16 @@ namespace osuCrypto
     SharedTable DBServer::remoteInput(u64 partyIdx)
     {
         if (mHasSeed == false)
-            initSeeds();
+            recvSeeds();
 
         SharedTable ret;
         auto chl = ((mIdx + 1) % 3 == partyIdx) ? mRt.mComm.mNext : mRt.mComm.mPrev;
 
         u64 rows;
+        std::cout << "Receiving rows" << std::endl;
         chl.recv(rows);
         std::vector<std::array<u64, 2>> sizes;
+        std::cout << "Receiving sizes" << std::endl;
         chl.recv(sizes);
 
         ret.mColumns.resize(sizes.size());

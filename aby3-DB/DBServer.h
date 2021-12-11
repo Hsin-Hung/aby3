@@ -25,6 +25,7 @@ namespace osuCrypto
         PRNG mPrng;
         bool mHasSeed = false;
         void initSeeds();
+        void recvSeeds();
 
         aby3::Sh3Runtime mRt;
         aby3::Sh3Encryptor mEnc;
