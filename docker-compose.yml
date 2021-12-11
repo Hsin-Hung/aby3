@@ -1,0 +1,36 @@
+version: '3.1'
+
+services:
+  machine_1:
+    image: ubuntu:latest
+    networks:
+      - mpi_network
+    working_dir: /
+    volumes:
+      - ./:/app
+    command: "/bin/bash"
+    stdin_open: true
+    tty: true
+  machine_2:
+    image: ubuntu:latest
+    networks:
+      - mpi_network
+    working_dir: /
+    volumes:
+      - ./:/app
+    command: "/bin/bash"
+    stdin_open: true
+    tty: true
+  machine_3:
+    image: ubuntu:latest
+    networks:
+      - mpi_network
+    working_dir: /
+    volumes:
+      - ./:/app
+    command: "/bin/bash"
+    stdin_open: true
+    tty: true
+
+networks:
+  mpi_network:
