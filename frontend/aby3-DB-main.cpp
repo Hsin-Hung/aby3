@@ -26,9 +26,11 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 	std::string firstName;	
 	std::string secondName;
 
+	ios.showErrorMessages(true);
+
 	if (rank == 0) {
-		firstIP = "0.0.0.0";
-		secondIP = "0.0.0.0";
+		firstIP = "127.0.0.1";
+		secondIP = "127.0.0.1";
 		firstMode = SessionMode::Server;
 		secondMode = SessionMode::Server;
 		firstPort = 1212;
@@ -37,10 +39,10 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		secondName = "01";
 	} else if (rank == 1) {
 		firstIP = ip0;
-		secondIP = "0.0.0.0";
+		secondIP = "127.0.0.1";
 		firstMode = SessionMode::Client;
 		secondMode = SessionMode::Server;
-		firstPort = 1212;
+		firstPort = 1213;
 		secondPort = 1214;
 		firstName = "01";
 		secondName = "12";
@@ -50,19 +52,21 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		firstMode = SessionMode::Client;
 		secondMode = SessionMode::Client;
 		firstPort = 1214;
-		secondPort = 1213;
+		secondPort = 1212;
 		firstName = "12";
 		secondName = "02";
 	}
 	std::cout << rank << " " << firstIP << " " << secondIP << std::endl;
 	Session server(ios, firstIP, firstPort, firstMode, firstName);
-	Session client(ios, secondIP, secondPort , secondMode, secondName);
+	Session client(ios, secondIP, secondPort, secondMode, secondName);
 
 
 	// A Peudorandom number generator implemented using AES-NI
 	PRNG prng(oc::ZeroBlock);
 	DBServer srvs;
 	srvs.init(rank, server, client, prng);
+	std::cout << "Prev Channel connected = " << srvs.mRt.mComm.mPrev.isConnected() << std::endl;
+	std::cout << "Next Channel connected = " << srvs.mRt.mComm.mNext.isConnected() << std::endl;
 	std::cout << "Connection made" << std::endl;
 
 	auto has_data = !data.first.empty();
@@ -125,13 +129,14 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 	bool failed = false;
 	std::cout << "Start routine" << std::endl;
 	setThreadName("t0");
-	t.setTimePoint("start");
-	
+
 	// party 0 will get the local input and other parties will get it remotely from party 0
 	std::cout << "Getting A" << std::endl;
 	auto A = (i == 0) ? srvs.localInput(a) : srvs.remoteInput(0);
 	std::cout << "Getting B" << std::endl;
 	auto B = (i == 0) ? srvs.localInput(b) : srvs.remoteInput(0);
+
+	t.setTimePoint("start");
 
 	if (i == 0)
 		t.setTimePoint("inputs");
@@ -139,18 +144,17 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 	if (i == 0)
 		srvs.setTimer(t);
 	
-	if (i == 0)
-	{	
-		std::cout << "routine: " << i << std::endl; 
-		std::cout << "SharedTable A\n_____________" << std::endl;
-		std::cout << A << std::endl;
-		std::cout << "SharedTable B\n_____________" << std::endl;
-		std::cout << B << std::endl;
-	}
+
+	std::cout << "routine: " << i << std::endl; 
+	std::cout << "SharedTable A\n_____________" << std::endl;
+	std::cout << A << std::endl;
+	std::cout << "SharedTable B\n_____________" << std::endl;
+	std::cout << B << std::endl;
+	
 
 
 	SelectQuery query;
-	// query.noReveal("r");
+	query.noReveal("r");
 	auto aKey = query.joinOn(A["key"], B["key"]);
 	query.addOutput("key", aKey);
 
@@ -200,10 +204,10 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		srvs.mEnc.revealAll(srvs.mRt.mComm, C.mColumns[0], c);
 		if (i == 0)
 			t.setTimePoint("reveal");
-		if(i == 0){
-			std::cout << "reveal C: \n"<< C << std::endl;
-			std::cout << "reveal mini c: \n" << c << std::endl;
-		}
+
+		std::cout << "reveal C: \n"<< C << std::endl;
+		std::cout << "reveal mini c: \n" << c << std::endl;
+		
 		
 
 	}
@@ -214,6 +218,7 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 	//std::cout << t << std::endl << srvs.getTimer() << std::endl;
 
 	auto comm0 = (srvs.mRt.mComm.mNext.getTotalDataSent() + srvs.mRt.mComm.mPrev.getTotalDataSent());
+	std::cout << "n = " << rows << "   " << comm0 << "\n" << t << std::endl;
 	// std::cout << "n = " << rows << "   " << comm0 + comm1 + comm2 << "\n" << t << std::endl;
 
 	if (failed)
