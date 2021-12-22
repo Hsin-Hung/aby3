@@ -133,14 +133,13 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 	bool failed = false;
 	std::cout << "Start routine" << std::endl;
 	setThreadName("t0");
-
+	t.setTimePoint("start");
 	// party 0 will get the local input and other parties will get it remotely from party 0
 	std::cout << "Getting A" << std::endl;
 	auto A = (i == 0) ? srvs.localInput(a) : srvs.remoteInput(0);
 	std::cout << "Getting B" << std::endl;
 	auto B = (i == 0) ? srvs.localInput(b) : srvs.remoteInput(0);
 
-	t.setTimePoint("start");
 
 	if (i == 0)
 		t.setTimePoint("inputs");
