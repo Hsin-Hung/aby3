@@ -13,7 +13,7 @@ using namespace oc;
 
 
 void DB_Intersect(std::pair<std::vector<std::pair<std::string, std::vector<int>>>, 
-std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols, bool sum, int rank, std::string ip0, std::string ip1, std::string ip2)
+std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols, bool sum, int rank, std::string ip0, std::string ip1, std::string ip2, bool debug)
 {
 	using namespace aby3;
 	IOService ios;
@@ -121,12 +121,14 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 			}
 		}
 	}
+	if(debug){
+		std::cout << "rows: " << rows << ", cols: " << cols << std::endl;
+		std::cout << "Table A\n_____________" << std::endl;
+		std::cout << a << std::endl;
+		std::cout << "Table B\n_____________" << std::endl;
+		std::cout << b << std::endl;
+	}
 
-	// std::cout << "rows: " << rows << ", cols: " << cols << std::endl;
-	// std::cout << "Table A\n_____________" << std::endl;
-	// std::cout << a << std::endl;
-	// std::cout << "Table B\n_____________" << std::endl;
-	// std::cout << b << std::endl;
 	Timer t;
 
 	int i = rank;
@@ -147,15 +149,15 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 	if (i == 0)
 		srvs.setTimer(t);
 	
+	if(debug){
+		std::cout << "routine: " << i << std::endl; 
+		std::cout << "SharedTable A\n_____________" << std::endl;
+		std::cout << A << std::endl;
+		std::cout << "SharedTable B\n_____________" << std::endl;
+		std::cout << B << std::endl;
+	}
 
-	// std::cout << "routine: " << i << std::endl; 
-	// std::cout << "SharedTable A\n_____________" << std::endl;
-	// std::cout << A << std::endl;
-	// std::cout << "SharedTable B\n_____________" << std::endl;
-	// std::cout << B << std::endl;
 	
-
-
 	SelectQuery query;
 	query.noReveal("r");
 	auto aKey = query.joinOn(A["key"], B["key"]);
@@ -207,11 +209,10 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		srvs.mEnc.revealAll(srvs.mRt.mComm, C.mColumns[0], c);
 		if (i == 0)
 			t.setTimePoint("reveal");
-
-		// std::cout << "reveal C: \n"<< C << std::endl;
-		// std::cout << "reveal mini c: \n" << c << std::endl;
-		
-		
+		if(debug){
+			std::cout << "reveal C: \n"<< C << std::endl;
+			std::cout << "reveal mini c: \n" << c << std::endl;
+		}
 
 	}
 	else

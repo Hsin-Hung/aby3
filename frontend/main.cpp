@@ -91,7 +91,7 @@ void help()
 	std::cout << "-u                        ~~ to run all tests" << std::endl;
 	std::cout << "-u n1 [n2 ...]            ~~ to run test n1, n2, ..." << std::endl;
 	std::cout << "-u -list                  ~~ to list all tests" << std::endl;
-	std::cout << "-intersect [-nn NN [-c C]] [-l L -r R]  ~~ to run the intersection benchmark with 2^NN set sizes, C 32-bit data columns, L and R are table csv files" << std::endl;
+	std::cout << "-intersect [-nn NN [-c C]] [-lf L -rf R]  ~~ to run the intersection benchmark with 2^NN set sizes, C 32-bit data columns, L and R are table csv files" << std::endl;
 	std::cout << "-eric -nn NN              ~~ to run the eric benchmark with 2^NN set sizes" << std::endl;
 	std::cout << "-threat -nn NN -s S       ~~ to run the threat log benchmark with 2^NN set sizes and S sets" << std::endl;
 }
@@ -162,12 +162,13 @@ int main(int argc, char** argv)
 
 			auto nn = cmd.getMany<int>("nn");
 			auto c = cmd.getOr("c", 0);
-			auto left = cmd.getOr<std::string>("l", "");
-			auto right = cmd.getOr<std::string>("r", "");
+			auto left = cmd.getOr<std::string>("lf", "");
+			auto right = cmd.getOr<std::string>("rf", "");
 			auto rank = cmd.getOr<int>("r", 0);
-			auto ip0 = cmd.getOr<std::string>("ip0", "machine_1");
-			auto ip1 = cmd.getOr<std::string>("ip1", "machine_2");
-			auto ip2 = cmd.getOr<std::string>("ip2", "machine_3");
+			auto ip0 = cmd.getOr<std::string>("ip0", "20.94.228.166");
+			auto ip1 = cmd.getOr<std::string>("ip1", "20.124.253.162");
+			auto ip2 = cmd.getOr<std::string>("ip2", "157.55.196.129");
+			auto d = cmd.getOr<bool>("d", 0);
 
 			std::pair<std::vector<std::pair<std::string, std::vector<int>>>, 
 			std::vector<std::pair<std::string, std::vector<int>>>> data;
@@ -188,7 +189,7 @@ int main(int argc, char** argv)
 					c = std::max(data.first.size(), data.second.size()) - 1;
 				}
 
-				DB_Intersect(data, size, c, cmd.isSet("sum"), rank, ip0, ip1, ip2);
+				DB_Intersect(data, size, c, cmd.isSet("sum"), rank, ip0, ip1, ip2, d);
 
 			}
 		}
