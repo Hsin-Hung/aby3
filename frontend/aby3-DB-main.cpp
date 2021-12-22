@@ -28,9 +28,13 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 
 	ios.showErrorMessages(true);
 
+	std::cout << "ip0: " << ip0 << "\n";
+	std::cout << "ip1: " << ip1 << "\n";
+	std::cout << "ip2: " << ip2 << std::endl;
+
 	if (rank == 0) {
-		firstIP = "127.0.0.1";
-		secondIP = "127.0.0.1";
+		firstIP = "0.0.0.0";
+		secondIP = "0.0.0.0";
 		firstMode = SessionMode::Server;
 		secondMode = SessionMode::Server;
 		firstPort = 1212;
@@ -39,7 +43,7 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		secondName = "01";
 	} else if (rank == 1) {
 		firstIP = ip0;
-		secondIP = "127.0.0.1";
+		secondIP = "0.0.0.0";
 		firstMode = SessionMode::Client;
 		secondMode = SessionMode::Server;
 		firstPort = 1213;
@@ -118,11 +122,11 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		}
 	}
 
-	std::cout << "rows: " << rows << ", cols: " << cols << std::endl;
-	std::cout << "Table A\n_____________" << std::endl;
-	std::cout << a << std::endl;
-	std::cout << "Table B\n_____________" << std::endl;
-	std::cout << b << std::endl;
+	// std::cout << "rows: " << rows << ", cols: " << cols << std::endl;
+	// std::cout << "Table A\n_____________" << std::endl;
+	// std::cout << a << std::endl;
+	// std::cout << "Table B\n_____________" << std::endl;
+	// std::cout << b << std::endl;
 	Timer t;
 
 	int i = rank;
@@ -145,11 +149,11 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		srvs.setTimer(t);
 	
 
-	std::cout << "routine: " << i << std::endl; 
-	std::cout << "SharedTable A\n_____________" << std::endl;
-	std::cout << A << std::endl;
-	std::cout << "SharedTable B\n_____________" << std::endl;
-	std::cout << B << std::endl;
+	// std::cout << "routine: " << i << std::endl; 
+	// std::cout << "SharedTable A\n_____________" << std::endl;
+	// std::cout << A << std::endl;
+	// std::cout << "SharedTable B\n_____________" << std::endl;
+	// std::cout << B << std::endl;
 	
 
 
@@ -166,8 +170,8 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 
 	auto C = srvs.joinImpl(query);
 
-	if (i == 0)
-		std::cout << "Join Implement Returns Shared Table: \n" << C << std::endl;
+	// if (i == 0)
+		// std::cout << "Join Implement Returns Shared Table: \n" << C << std::endl;
 	if (i == 0)
 		t.setTimePoint("intersect");
 
@@ -205,8 +209,8 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		if (i == 0)
 			t.setTimePoint("reveal");
 
-		std::cout << "reveal C: \n"<< C << std::endl;
-		std::cout << "reveal mini c: \n" << c << std::endl;
+		// std::cout << "reveal C: \n"<< C << std::endl;
+		// std::cout << "reveal mini c: \n" << c << std::endl;
 		
 		
 
