@@ -46,6 +46,17 @@ To see all the command line options, execute the program
 
 The library can be linked by linking the binraries in `lib/` and `thirdparty/win` or `thirdparty/unix` depending on the platform.
 
+## Cloud Run (Intersect)
+After building the project, update `ips.txt` so that each line contains the IP of each party(VM). There should only be a total of three parties, where the first line is the first party IP and the last line is the third party IP. 
+
+On each party VM, execute
+
+`bin/frontend -intersect -nn N -r R`. 
+ 
+`N` will set the table size as `2^N` and it should be set the same on all parties.
+
+`R` is the calling party's rank, which should be betwen 0-2.
+
 ## Help
  
 Contact Peter Rindal peterrindal@gmail.com for any assistance on building  or running the library.

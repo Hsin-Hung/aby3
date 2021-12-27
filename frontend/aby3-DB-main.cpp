@@ -62,7 +62,6 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, int rank,
 		secondName = "02";
 	}
 
-	std::cout << rank << " " << firstIP << " " << secondIP << std::endl;
 	Session server(ios, firstIP, firstPort, firstMode, firstName);
 	Session client(ios, secondIP, secondPort, secondMode, secondName);
 
@@ -71,8 +70,6 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, int rank,
 	PRNG prng(oc::ZeroBlock);
 	DBServer srvs;
 	srvs.init(rank, server, client, prng);
-	std::cout << "Prev Channel connected = " << srvs.mRt.mComm.mPrev.isConnected() << std::endl;
-	std::cout << "Next Channel connected = " << srvs.mRt.mComm.mNext.isConnected() << std::endl;
 	std::cout << "Connection made" << std::endl;
 
 	auto has_data = !data.first.empty();
@@ -90,9 +87,6 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, int rank,
 		aCols.emplace_back("a" + std::to_string(i), TypeID::IntID, 32);
 		bCols.emplace_back("b" + std::to_string(i), TypeID::IntID, 32);
 	}
-
-	std::cout << "aCols size: " << aCols.size() << std::endl;
-	std::cout << "bCols size: " << bCols.size() << std::endl;
 	
 	auto left_table = data.first, right_table = data.second;
 
