@@ -11,79 +11,14 @@
 
 #include "tests_cryptoTools/UnitTests.h"
 #include "cryptoTools/Crypto/PRNG.h"
+#include "utils.h"
 #include <iostream>
 #include <fstream>
 #include <string>
 
 using namespace oc;
 using namespace aby3;
-std::vector<std::string> unitTestTag{ "u", "unitTest" };
-
-
-std::vector<std::pair<std::string, std::vector<int>>> read_csv(std::string filename){
-    // Reads a CSV file into a vector of <string, vector<int>> pairs where
-    // each pair represents <column name, column values>
-
-    // Create a vector of <string, int vector> pairs to store the result
-    std::vector<std::pair<std::string, std::vector<int>>> result;
-
-    // Create an input filestream
-	std::cout << filename << std::endl;
-    std::ifstream myFile(filename);
-
-    // Make sure the file is open
-    if(!myFile.is_open()) throw std::runtime_error("Could not open file");
-
-    // Helper vars
-    std::string line, colname;
-    int val;
-
-    // Read the column names
-    if(myFile.good())
-    {
-        // Extract the first line in the file
-        std::getline(myFile, line);
-
-        // Create a stringstream from line
-        std::stringstream ss(line);
-
-        // Extract each column name
-        while(std::getline(ss, colname, ',')){
-            
-            // Initialize and add <colname, int vector> pairs to result
-            result.push_back({colname, std::vector<int> {}});
-        }
-    }
-
-    // Read data, line by line
-    while(std::getline(myFile, line))
-    {
-        // Create a stringstream of the current line
-        std::stringstream ss(line);
-        
-        // Keep track of the current column index
-        int colIdx = 0;
-        
-        // Extract each integer
-        while(ss >> val){
-            
-            // Add the current integer to the 'colIdx' column's values vector
-            result.at(colIdx).second.push_back(val);
-            
-            // If the next token is a comma, ignore it and move on
-            if(ss.peek() == ',') ss.ignore();
-            
-            // Increment the column index
-            colIdx++;
-        }
-    }
-
-    // Close file
-    myFile.close();
-
-    return result;
-}
-
+std::vector<std::string> unitTestTag{"u", "unitTest"};
 
 void help()
 {
@@ -91,22 +26,21 @@ void help()
 	std::cout << "-u                        ~~ to run all tests" << std::endl;
 	std::cout << "-u n1 [n2 ...]            ~~ to run test n1, n2, ..." << std::endl;
 	std::cout << "-u -list                  ~~ to list all tests" << std::endl;
-	std::cout << "-intersect [-nn NN [-c C]] [-lf L -rf R]  ~~ to run the intersection benchmark with 2^NN set sizes, C 32-bit data columns, L and R are table csv files" << std::endl;
+	std::cout << "-intersect [-nn NN [-c C]] [-lf L -rf R] [-r R] ~~ to run the intersection benchmark with 2^NN set sizes, C 32-bit data columns,\n \
+	L and R are optional table csv files, and the rank R(0-3) of the calling party."
+			  << std::endl;
 	std::cout << "-eric -nn NN              ~~ to run the eric benchmark with 2^NN set sizes" << std::endl;
 	std::cout << "-threat -nn NN -s S       ~~ to run the threat log benchmark with 2^NN set sizes and S sets" << std::endl;
 }
 
-
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
 
-
-	try {
-
+	try
+	{
 
 		bool set = false;
 		oc::CLP cmd(argc, argv);
-
 
 		if (cmd.isSet(unitTestTag))
 		{
@@ -155,7 +89,6 @@ int main(int argc, char** argv)
 			}
 		}
 
-
 		if (cmd.isSet("intersect"))
 		{
 			set = true;
@@ -165,15 +98,23 @@ int main(int argc, char** argv)
 			auto left = cmd.getOr<std::string>("lf", "");
 			auto right = cmd.getOr<std::string>("rf", "");
 			auto rank = cmd.getOr<int>("r", 0);
-			auto ip0 = cmd.getOr<std::string>("ip0", "20.94.228.166");
-			auto ip1 = cmd.getOr<std::string>("ip1", "20.124.253.162");
-			auto ip2 = cmd.getOr<std::string>("ip2", "157.55.196.129");
+			auto ip0 = cmd.getOr<std::string>("ip0", "127.0.0.1");
+			auto ip1 = cmd.getOr<std::string>("ip1", "127.0.0.1");
+			auto ip2 = cmd.getOr<std::string>("ip2", "127.0.0.1");
 			auto d = cmd.getOr<bool>("d", 0);
 
-			std::pair<std::vector<std::pair<std::string, std::vector<int>>>, 
-			std::vector<std::pair<std::string, std::vector<int>>>> data;
-			
-			if(left !=  "" && right != ""){
+			std::pair<std::vector<std::pair<std::string, std::vector<int>>>,
+					  std::vector<std::pair<std::string, std::vector<int>>>>
+				data;
+
+			if (rank < 0 || rank > 2)
+			{
+				std::cerr << "Invalid rank!" << std::endl;
+				exit(1);
+			}
+
+			if (left != "" && right != "")
+			{
 				data.first = read_csv(left);
 				data.second = read_csv(right);
 			}
@@ -184,16 +125,15 @@ int main(int argc, char** argv)
 			for (auto n : nn)
 			{
 				auto size = 1 << n;
-				if(!data.first.empty()){
+				if (!data.first.empty())
+				{
 					size = std::max(data.first.at(0).second.size(), data.second.at(0).second.size());
 					c = std::max(data.first.size(), data.second.size()) - 1;
 				}
 
-				DB_Intersect(data, size, c, cmd.isSet("sum"), rank, ip0, ip1, ip2, d);
-
+				DB_Intersect(data, size, rank, getPartyIPs(), c, cmd.isSet("sum"), d);
 			}
 		}
-
 
 		if (cmd.isSet("threat"))
 		{
@@ -211,8 +151,6 @@ int main(int argc, char** argv)
 			}
 		}
 
-
-
 		if (cmd.isSet("card"))
 		{
 			set = true;
@@ -227,8 +165,8 @@ int main(int argc, char** argv)
 				DB_cardinality(size);
 			}
 		}
-		
-		//if (cmd.isSet("add"))
+
+		// if (cmd.isSet("add"))
 		//{
 		//	set = true;
 
@@ -247,9 +185,8 @@ int main(int argc, char** argv)
 		{
 			help();
 		}
-
 	}
-	catch (std::exception& e)
+	catch (std::exception &e)
 	{
 		std::cout << e.what() << std::endl;
 	}

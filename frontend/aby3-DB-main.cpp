@@ -7,13 +7,14 @@
 #include <cryptoTools/Network/IOService.h>
 #include <atomic>
 #include "aby3-DB/DBServer.h"
+#include "utils.h"
 #include <unordered_set>
 
 using namespace oc; 
 
 
 void DB_Intersect(std::pair<std::vector<std::pair<std::string, std::vector<int>>>, 
-std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols, bool sum, int rank, std::string ip0, std::string ip1, std::string ip2, bool debug)
+std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, int rank, Party_IPs party_ips, u32 cols, bool sum,bool debug)
 {
 	using namespace aby3;
 	IOService ios;
@@ -28,9 +29,9 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 
 	ios.showErrorMessages(true);
 
-	std::cout << "ip0: " << ip0 << "\n";
-	std::cout << "ip1: " << ip1 << "\n";
-	std::cout << "ip2: " << ip2 << std::endl;
+	std::cout << "ip0: " << party_ips.ip0 << "\n";
+	std::cout << "ip1: " << party_ips.ip1 << "\n";
+	std::cout << "ip2: " << party_ips.ip2 << std::endl;
 
 	if (rank == 0) {
 		firstIP = "0.0.0.0";
@@ -42,7 +43,7 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		firstName = "02";
 		secondName = "01";
 	} else if (rank == 1) {
-		firstIP = ip0;
+		firstIP = party_ips.ip0;
 		secondIP = "0.0.0.0";
 		firstMode = SessionMode::Client;
 		secondMode = SessionMode::Server;
@@ -51,8 +52,8 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		firstName = "01";
 		secondName = "12";
 	} else if (rank == 2) {
-		firstIP = ip1;
-		secondIP = ip0;
+		firstIP = party_ips.ip1;
+		secondIP = party_ips.ip0;
 		firstMode = SessionMode::Client;
 		secondMode = SessionMode::Client;
 		firstPort = 1214;
@@ -60,6 +61,7 @@ std::vector<std::pair<std::string, std::vector<int>>>> data, u32 rows, u32 cols,
 		firstName = "12";
 		secondName = "02";
 	}
+
 	std::cout << rank << " " << firstIP << " " << secondIP << std::endl;
 	Session server(ios, firstIP, firstPort, firstMode, firstName);
 	Session client(ios, secondIP, secondPort, secondMode, secondName);
